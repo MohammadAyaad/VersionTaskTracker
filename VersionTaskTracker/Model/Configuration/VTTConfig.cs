@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace VersionTaskTracker.Model.Configuration
+﻿namespace VersionTaskTracker.Model.Configuration
 {
-    internal class VTTConfig
+    public class VTTConfig
     {
+        public string VTTInstanceConfigPath { get; set; } = "vtt.config.json";
     }
 }
