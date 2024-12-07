@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using CliFx;
 using CliFx.Infrastructure;
@@ -7,6 +8,8 @@ using UtilitiesX;
 using UtilitiesX.Extensions;
 using VersionTaskTracker.Services;
 using VTT.Commands.Instance;
+using VTT.Commands.Instance.Task;
+using VTT.Commands.Instance.Task.Update;
 using VTT.Commands.Test;
 using VTT.Commands.VTT;
 
@@ -24,7 +27,7 @@ public static class Program
     public static async Task Main(string[] args)
     {
         Environment = VTTEnvironment.Setup(ENVIRONMENT_PATH);
-        Instance = new VTTInstance(Directory.GetCurrentDirectory(), Environment.Config);
+        Instance = new VTTInstance(new FileSystem().DirectoryInfo.New(Directory.GetCurrentDirectory()), Environment.Config);
 
         await new CliApplicationBuilder()
             .AddCommand<VersionCommand>()
@@ -32,8 +35,15 @@ public static class Program
             .AddCommand<InitializeInstanceCommand>()
             .AddCommand<LogCommand>()
             .AddCommand<StatusCommand>()
-            .AddCommand<AddCommand>()
             .AddCommand<TrackCommand>()
+            .AddCommand<TaskParentCommand>()
+            .AddCommand<CreateTaskCommand>()
+            .AddCommand<ReadTaskCommand>()
+            .AddCommand<UpdateTaskCommand>()
+            .AddCommand<UpdateTaskStatusCommand>()
+            .AddCommand<UpdateTaskLabelCommand>()
+            .AddCommand<UpdateTaskDescriptionCommand>()
+            .AddCommand<DeleteTaskCommand>()
             .Build()
             .RunAsync(args);
     }
