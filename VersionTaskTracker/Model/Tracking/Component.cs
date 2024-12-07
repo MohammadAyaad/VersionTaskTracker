@@ -21,6 +21,8 @@ public class Component
     public required string Name { get; set; }
     public required ComponentType ComponentType { get; set; }
     public string Description { get; set; } = string.Empty;
+    [NotMapped]
+    public bool Tracked { get; set; } = false;
 
     public Guid? ParentComponentId { get; set; }
     [JsonIgnore]
