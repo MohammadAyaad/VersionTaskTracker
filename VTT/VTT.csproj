@@ -5,10 +5,22 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CliFx" Version="2.3.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VersionTaskTracker\VersionTaskTracker.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UtilitiesX">
+      <HintPath>..\..\UtilitiesX\UtilitiesX\bin\Debug\net8.0\UtilitiesX.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

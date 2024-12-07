@@ -4,6 +4,31 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="C5" Version="3.0.0" />
+    <PackageReference Include="Glob" Version="1.1.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="PathLib" Version="0.9.8" />
+    <PackageReference Include="System.IO.Abstractions" Version="21.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UtilitiesX">
+      <HintPath>..\..\UtilitiesX\UtilitiesX\bin\Debug\net8.0\UtilitiesX.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>
