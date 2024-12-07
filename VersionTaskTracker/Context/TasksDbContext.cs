@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.IO.Abstractions;
 using System.Text.RegularExpressions;
 using UtilitiesX;
 using UtilitiesX.Extensions;
@@ -15,12 +16,14 @@ namespace VersionTaskTracker.Context;
 
 public class TasksDbContext : DbContext , IStorable<TasksDbContext>
 {
+    private string _workingDirectory;
     private string _path;
     public string DatabasePath { get {  return _path; } }
 
-    public TasksDbContext(string path)
+    public TasksDbContext(string path, string workingDirectory)
     {
         this._path = path;
+        this._workingDirectory = workingDirectory;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,13 +39,17 @@ public class TasksDbContext : DbContext , IStorable<TasksDbContext>
         modelBuilder.Entity<Component>()
             .HasIndex(c => c.Path)
             .IsUnique(true);
+
+        modelBuilder.Entity<VersionTaskTracker.Model.Tracking.Task>()
+            .HasIndex(t => t.Int_Id)
+            .IsUnique();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite($"Data Source={this._path};")
-            .EnableSensitiveDataLogging()  
-            .LogTo(Console.WriteLine, LogLevel.Information);
+        optionsBuilder.UseSqlite($"Data Source={this._path};");
+        //    .EnableSensitiveDataLogging()  
+        //    .LogTo(Console.WriteLine, LogLevel.Information);
         optionsBuilder.UseLazyLoadingProxies();
     }
 
@@ -54,56 +61,67 @@ public class TasksDbContext : DbContext , IStorable<TasksDbContext>
     public void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(this._path));
+        Console.WriteLine(this.ChangeTracker.DebugView.LongView);
         this.Database.EnsureCreated();
         this.Database.Migrate();
         this.SaveChanges();
     }
 
 
-    public Guid FromDirectory(string dir, List<string> ignores)
+    public Guid FromDirectory(IDirectoryInfo dir, List<string> ignores)
     {
-        Component c = TraverseFromDirectory(dir, "", null, (p,dir,root,isDir) => !ShouldIgnore(p,ignores));
+        Component c = TraverseFromDirectory(dir,null,
+        d => {
+            return (!ShouldIgnore(GetRelativePath(dir.FullName,d.FullName)+"/", ignores))  && (this.Components.AsEnumerable().Any(c => c.Path.Equals(d.FullName)));
+        },
+        f => {
+            return (!ShouldIgnore(GetRelativePath(dir.FullName,f.FullName),ignores)) && (this.Components.AsEnumerable().Any(c => c.Path.Equals(f.FullName)));
+        });
         Console.WriteLine(JObject.FromObject(this.ChangeTracker.DebugView).ToString());
         return c.Id;
     }
 
-    
-    public Component GetUntracked(string workingDirectory, List<string> ignores)
-    {
-        return TraverseFromDirectory(workingDirectory + "\\", "", null, (p,dir,root,isDir) =>
-        {
-            return (!ShouldIgnore(p, ignores)) && (this.Components.AsEnumerable().Where(c => ProcessPath(c.Path,dir,root,isDir).Equals(p)).Count() == 0);
+    public Component GetWorkingTree(IDirectoryInfo workingDirectory, List<string> ignores) {
+        return TraverseFromDirectory(workingDirectory, null, 
+        d => {
+            string relative = GetRelativePath(workingDirectory.FullName,d.FullName)+"/";
+            return (!ShouldIgnore(relative, ignores));
+        },
+        f => {
+            string relative = GetRelativePath(workingDirectory.FullName,f.FullName);
+            return (!ShouldIgnore(relative, ignores));
         });
     }
-    public static string ConvertWindowsToUnixPath(string windowsPath)
+
+    public List<Component> GetUntracked(IDirectoryInfo workingDirectory, List<string> ignores)
     {
-        return windowsPath.Replace("\\", "/").Branch(c => Regex.IsMatch(c, ".:/.*"), onTrue: (c) => c.Replace($"{c.First()}:", $"/{c.First()}"));
+        return GetWorkingTree(workingDirectory,ignores)
+        .Flatten(c => c.Children ?? new List<Component>())
+        .Where(c => !this.Components.Any(x => x.Path.Equals(c.Path)))
+        .ToList();
     }
-    public static string ConvertUnixToWindows(string unixPath)
-    {
-        return unixPath.Replace("/", "\\").Branch(c => Regex.IsMatch(c,@"\\.\\.*"),onTrue: c=> c.Replace($"\\{c.First()}",$"{c.First()}:"));
+
+    private string GetRelativePath(string root, string path) {
+        List<string> rl = root.Split(Path.DirectorySeparatorChar).ToList();
+        List<string> pl = path.Split(Path.DirectorySeparatorChar).ToList();
+        int i;
+        for(i = 0;i < rl.Count;i++) {
+            if(!(i >= 0 && i < rl.Count && i < pl.Count)) break; 
+            if(!rl[i].Equals(pl[i])) break; 
+        }
+        return string.Join(Path.DirectorySeparatorChar,pl.Slice(i,pl.Count - i));
     }
-    private static string ProcessPath(string x,string dir,string root,bool isDir)
+
+    private Component TraverseFromDirectory(IDirectoryInfo dir, Component parent,Func<IDirectoryInfo,bool> IsDirIncluded,Func<IFileInfo,bool> IsFileIncluded)
     {
-        //string final = root + x.Replace(dir, "").Replace("\\", "/");
-        //if (final.StartsWith("/"))
-        //{
-        //    final = final.Remove(0, 1);
-        //}
-        //final += "/";
-        string a = ConvertWindowsToUnixPath(x);
-        string b = ConvertWindowsToUnixPath(dir).Branch(c => c.Last() != '/',onTrue: c => $"{c}/");
-        string f = a.Replace(b, "");
-        //if (x.Contains("res")) Debugger.Break();
-        return f;
-    }
-    private Component TraverseFromDirectory(string dir, string root, Component parent, Func<string,string,string,bool,bool> IsIncluded)
-    {
-        Component r = new Component()
+        Component r = 
+            (this.Components.Any(c => c.Path.Equals(GetRelativePath(this._workingDirectory,dir.FullName)+"/")))?
+                this.Components.AsNoTracking().FirstOrDefault(c => c.Path.Equals(GetRelativePath(this._workingDirectory,dir.FullName)+"/"))!
+                : new Component()
         {
             Id = Guid.NewGuid(),
-            Name = dir.Split('\\').Last(),
-            Path = root,
+            Name = dir.Name,
+            Path = GetRelativePath(this._workingDirectory,dir.FullName) + "/",
             ComponentType = ComponentType.DIRECTORY,
             ParentComponent = parent,
             ParentComponentId = (parent == null) ? null : parent.Id,
@@ -112,34 +130,40 @@ public class TasksDbContext : DbContext , IStorable<TasksDbContext>
             Children = new List<Component>()
         };
 
-        string[] dirs = Directory.GetDirectories(dir).Map(d => ProcessPath(d,dir,root,true) + "/").Where(d => IsIncluded(d,dir,root,true)).Map(s => (!string.IsNullOrEmpty(root)) ? s.Replace(root, "") : s).ToArray();
-        string[] files = Directory.GetFiles(dir).Map(d => ProcessPath(d,dir,root,false)).Where(d => IsIncluded(d,dir,root,false)).Map(s => (!string.IsNullOrEmpty(root)) ? s.Replace(root, "") : s).ToArray();
+        IDirectoryInfo[] dirs = dir.GetDirectories()
+            .Where(d => IsDirIncluded(d))
+            .ToArray();
 
-        foreach (string f in files)
+        IFileInfo[] files = dir.GetFiles()
+            .Where(f => IsFileIncluded(f))
+            .ToArray();
+
+        foreach (IFileInfo f in files)
         {
-            string file = $"{root}{f}";//Path.Combine(dir, string.Join('\\', f.Split("/").Where(s => !string.IsNullOrEmpty(s))));
-            Console.WriteLine($"FILE {root}{f}");
-            Component c = new Component()
+            //Console.WriteLine($"FILE {f.FullName}");
+            string fr_path = GetRelativePath(this._workingDirectory,f.FullName);
+            Component c = 
+                (this.Components.Any(x => x.Path.Equals(fr_path)))?
+                this.Components.FirstOrDefault(x => x.Path.Equals(fr_path))!:
+            new Component()
             {
-                Name = Path.GetFileName(file),
-                Path = file,
+                Id = Guid.NewGuid(),
+                Name = f.Name,
+                Path = GetRelativePath(this._workingDirectory,f.FullName),
                 Tasks = new List<Model.Tracking.Task>(),
                 ComponentType = ComponentType.FILE,
                 ParentComponent = r,
                 Children = null,
                 Description = "",
-                Id = Guid.NewGuid(),
                 ParentComponentId = r.Id
             };
             r.Children.Add(c);
         }
 
-        foreach (string dd in dirs)
+        foreach (IDirectoryInfo d in dirs)
         {
-            string x = ConvertUnixToWindows(dd);
-            string d = $"{dir}{x}";
-            Console.WriteLine($"DIR {root}{dd}".Replace("//","/"));
-            r.Children.Add(TraverseFromDirectory(d, $"{root}{dd}".Replace("//","/"), r, IsIncluded));
+            //Console.WriteLine($"DIR {d.FullName}");
+            r.Children.Add(TraverseFromDirectory(d,r, IsDirIncluded,IsFileIncluded));
         }
         return r;
     }
