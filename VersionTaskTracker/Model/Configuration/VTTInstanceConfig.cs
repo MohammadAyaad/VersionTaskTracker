@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,10 +13,10 @@ namespace VersionTaskTracker.Model.Configuration
     public class VTTInstanceConfig : IStorable<VTTInstanceConfig>
     {
         [JsonIgnore]
-        private string _workingDir;
+        private IDirectoryInfo _workingDir;
         [JsonIgnore]
         private VTTConfig _config;
-        public VTTInstanceConfig(VTTConfig config,string workingDir) { 
+        public VTTInstanceConfig(VTTConfig config,IDirectoryInfo workingDir) { 
             this._config = config;
             _workingDir = workingDir;
         }
@@ -28,7 +29,7 @@ namespace VersionTaskTracker.Model.Configuration
 
         public void Load()
         {
-            string VTTInstanceConfigPath = Path.Combine(this._workingDir, this._config.VTTInstanceConfigPath);
+            string VTTInstanceConfigPath = Path.Combine(this._workingDir.FullName, this._config.VTTInstanceConfigPath);
 
             VTTInstanceConfig iconfig = JObject.Parse(File.ReadAllText(VTTInstanceConfigPath)).ToObject<VTTInstanceConfig>()!;
 
@@ -41,7 +42,7 @@ namespace VersionTaskTracker.Model.Configuration
 
         public void Save()
         {
-            string VTTInstanceConfigPath = Path.Combine(this._workingDir, this._config.VTTInstanceConfigPath);
+            string VTTInstanceConfigPath = Path.Combine(this._workingDir.FullName, this._config.VTTInstanceConfigPath);
 
             File.WriteAllText(VTTInstanceConfigPath, JObject.FromObject(this).ToString());
         }
