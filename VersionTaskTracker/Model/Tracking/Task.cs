@@ -9,5 +9,10 @@ public class Task
     public string Description { get; set; } = string.Empty;
     public Guid ParentComponentId { get; set; }
 
-    public virtual Component ParentComponent { get; set; }
+    public virtual Component? ParentComponent { get; set; }
+    
+
+    public override string ToString()
+    {
+        return $"[{Id.ToString()}|#{Int_Id}]: {Label}\nStatus : {Status}\n{Description}";
 }
