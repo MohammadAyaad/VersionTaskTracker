@@ -23,8 +23,8 @@ public class TrackCommand : ICommand
     {
         Program.Instance!.TasksDbContext.AddRange(
         Program.Instance!.TasksDbContext.GetUntracked(Program.Instance.WorkingDirectory, Program.Instance.VTTIgnore)
-            .FlattenTransform(c => c.Children != null ? c.Children : new List<Component>(), c => c)
-            .Where(c => Glob.IsMatch(c.Path,Path)).Map(c =>
+            .Where(c => Glob.IsMatch(c.Path,Path))
+            .Map(c =>
             {
                 console.Output.WriteLine($"ADDED: {c.Path}");
                 return c;
