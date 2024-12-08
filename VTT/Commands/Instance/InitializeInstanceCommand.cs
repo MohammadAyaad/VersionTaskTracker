@@ -4,6 +4,7 @@ using CliFx.Infrastructure;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ public class InitializeInstanceCommand : ICommand
     public ValueTask ExecuteAsync(IConsole console)
     {
         console.Output.WriteLine($"initializing directory...");
-        string currentPath = Directory.GetCurrentDirectory();
+        IDirectoryInfo currentPath = new FileSystem().DirectoryInfo.New(Directory.GetCurrentDirectory());
         console.Output.WriteLine($"CURRENT PATH : \'{currentPath}\'");
 
         return WhenInstanceReady(console, (c, i) =>
