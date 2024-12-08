@@ -4,6 +4,7 @@ using CliFx.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.Marshalling;
 using System.Text;
 using System.Threading.Tasks;
 using UtilitiesX;
@@ -21,11 +22,13 @@ public class StatusCommand : ICommand
         return WhenInstanceReady(console, (c,i) =>
         {
             c.Output.WriteLine("Version Task Tracker System is initialized.");
+            c.WithForegroundColor(ConsoleColor.Red);
             c.Output.WriteLine(
             string.Join("\n",
             Program.Instance.TasksDbContext.GetUntracked(Program.Instance.WorkingDirectory,Program.Instance.VTTIgnore)
-            .FlattenTransform(c => c.Children != null ? c.Children:new List<Component>(),c => c.Path.Branch(c=> c.Equals(Program.Instance.WorkingDirectory),onTrue: (c) => "\\",onFalse: (c) => c.Replace(Program.Instance.WorkingDirectory, "")))
+            .Map(c => c.Path)
             .Map(m => $"untracked: '{m}'")));
+            c.ResetColor();
             return ValueTask.CompletedTask;
         });
     }
