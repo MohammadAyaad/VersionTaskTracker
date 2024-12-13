@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "VTT": {
-      "commandName": "Project",
-      "commandLineArgs": "track *",
-      "workingDirectory": "D:\\Projects-Workspaces\\Visual Studio Code\\WebPages\\My Personal Website\\PersonalWebsite"
-    }
-  }
-}
