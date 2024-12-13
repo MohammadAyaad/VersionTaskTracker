@@ -5,7 +5,7 @@ VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionTaskTracker", "VersionTaskTracker\VersionTaskTracker.csproj", "{A49A5E5E-4E4A-43CD-8856-5F65801B8685}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VTT", "VTT\VTT.csproj", "{FB037199-59BB-441A-97AC-5827A63C3484}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionTaskTracker.Cli", "VersionTaskTracker.Cli\VersionTaskTracker.Cli.csproj", "{FB037199-59BB-441A-97AC-5827A63C3484}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
