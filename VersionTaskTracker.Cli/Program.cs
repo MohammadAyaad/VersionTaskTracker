@@ -39,6 +39,7 @@ public static class Program
             .AddCommand<UpdateTaskLabelCommand>()
             .AddCommand<UpdateTaskDescriptionCommand>()
             .AddCommand<DeleteTaskCommand>()
+            .SetExecutableName("vtt")
             .Build()
             .RunAsync(args);
     }
