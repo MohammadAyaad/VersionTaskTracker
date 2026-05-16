@@ -1,0 +1,49 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: .NET
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Setup git
+      run: |
+        git config --global user.email "${{ secrets.EMAIL }}"
+        git config --global user.name "${{ secrets.USERNAME }}"
+    - name: Build VTTLib
+      run: |
+        cd VersionTaskTracker
+        dotnet build
+        cd ..
+    - name: commit lib build
+      run: |
+        git add VersionTaskTracker/bin/*
+        git commit -m "adding library release"
+    - name: Build VTTCli
+      run: |
+        cd VTT
+        dotnet build
+        cd ..
+    - name: commit cli build
+      run: |
+        git add VTT/bin/*
+        git commit -m "adding cli release"
+    - name: publish builds
+      run: |
+        git push
