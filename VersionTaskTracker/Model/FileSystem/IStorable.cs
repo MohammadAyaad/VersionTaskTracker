@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace VersionTaskTracker.Model.FileSystem;
 
-public interface IStorable<TSelf> where TSelf : IStorable<TSelf>
+public interface IStorable<TSelf>
+    where TSelf : IStorable<TSelf>
 {
     public void Load();
     public void Save();

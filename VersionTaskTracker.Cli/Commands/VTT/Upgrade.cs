@@ -4,9 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VTT.Commands.VTT
+namespace VersionTaskTracker.Cli.Commands.VTT
 {
-    internal class Upgrade
-    {
-    }
+    internal class Upgrade { }
 }
