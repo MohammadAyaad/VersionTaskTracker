@@ -1,0 +1,15 @@
+# Files
+.vttignore
+.gitignore
+.gitattributes
+vtt.config.json
+*.csproj
+*.sln
+
+# Directories
+.git/
+*/bin/
+*/obj/
+.vscode/
+.vtt/
+*/Properties/

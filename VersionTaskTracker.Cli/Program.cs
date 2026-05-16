@@ -1,49 +1,45 @@
-﻿using System.Reflection;
-using System.IO.Abstractions;
-using System.Runtime.CompilerServices;
+﻿using System.IO.Abstractions;
 using CliFx;
 using CliFx.Infrastructure;
-using PathLib;
-using UtilitiesX;
-using UtilitiesX.Extensions;
+using VersionTaskTracker.Cli.Commands.Instance;
+using VersionTaskTracker.Cli.Commands.Instance.Task;
+using VersionTaskTracker.Cli.Commands.Instance.Task.Update;
+using VersionTaskTracker.Cli.Commands.Test;
+using VersionTaskTracker.Cli.Commands.VTT;
 using VersionTaskTracker.Services;
-using VTT.Commands.Instance;
-using VTT.Commands.Instance.Task;
-using VTT.Commands.Instance.Task.Update;
-using VTT.Commands.Test;
-using VTT.Commands.VTT;
 
-namespace VTT;
+namespace VersionTaskTracker.Cli;
 
 public static class Program
 {
-    public static readonly string ENVIRONMENT_PATH = Path.GetDirectoryName(
-        Assembly.GetExecutingAssembly().Location
-    );
+    public static readonly string ENVIRONMENT_PATH = AppContext.BaseDirectory;
 
-    public static VTTEnvironment Environment;
+    public static VTTEnvironment Environment = VTTEnvironment.Setup(ENVIRONMENT_PATH);
     public static VTTInstance? Instance;
 
     public static async Task Main(string[] args)
     {
-        Environment = VTTEnvironment.Setup(ENVIRONMENT_PATH);
-        Instance = new VTTInstance(new FileSystem().DirectoryInfo.New(Directory.GetCurrentDirectory()), Environment.Config);
+        Instance = new VTTInstance(
+            new FileSystem().DirectoryInfo.New(Directory.GetCurrentDirectory()),
+            Environment.Config
+        );
 
         await new CliApplicationBuilder()
             .AddCommand<VersionCommand>()
             .AddCommand<TestCommand>()
             .AddCommand<InitializeInstanceCommand>()
-            .AddCommand<LogCommand>()
             .AddCommand<StatusCommand>()
             .AddCommand<TrackCommand>()
             .AddCommand<TaskParentCommand>()
             .AddCommand<CreateTaskCommand>()
             .AddCommand<ReadTaskCommand>()
+            .AddCommand<ListTasksCommand>()
             .AddCommand<UpdateTaskCommand>()
             .AddCommand<UpdateTaskStatusCommand>()
             .AddCommand<UpdateTaskLabelCommand>()
             .AddCommand<UpdateTaskDescriptionCommand>()
             .AddCommand<DeleteTaskCommand>()
+            .SetExecutableName("vtt")
             .Build()
             .RunAsync(args);
     }
@@ -57,7 +53,7 @@ public static class Program
     public static ValueTask WhenInstanceReady(
         IConsole console,
         Func<IConsole, VTTInstance, ValueTask> f,
-        Func<IConsole, ValueTask> notReady = null
+        Func<IConsole, ValueTask>? notReady = null
     )
     {
         notReady ??= InstanceNotReady;

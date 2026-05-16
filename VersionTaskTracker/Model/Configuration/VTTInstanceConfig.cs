@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using VersionTaskTracker.Model.FileSystem;
 
 namespace VersionTaskTracker.Model.Configuration
@@ -14,9 +14,12 @@ namespace VersionTaskTracker.Model.Configuration
     {
         [JsonIgnore]
         private IDirectoryInfo _workingDir;
+
         [JsonIgnore]
         private VTTConfig _config;
-        public VTTInstanceConfig(VTTConfig config,IDirectoryInfo workingDir) { 
+
+        public VTTInstanceConfig(VTTConfig config, IDirectoryInfo workingDir)
+        {
             this._config = config;
             _workingDir = workingDir;
         }
@@ -29,9 +32,14 @@ namespace VersionTaskTracker.Model.Configuration
 
         public void Load()
         {
-            string VTTInstanceConfigPath = Path.Combine(this._workingDir.FullName, this._config.VTTInstanceConfigPath);
+            string VTTInstanceConfigPath = Path.Combine(
+                this._workingDir.FullName,
+                this._config.VTTInstanceConfigPath
+            );
 
-            VTTInstanceConfig iconfig = JObject.Parse(File.ReadAllText(VTTInstanceConfigPath)).ToObject<VTTInstanceConfig>()!;
+            VTTInstanceConfig iconfig = JObject
+                .Parse(File.ReadAllText(VTTInstanceConfigPath))
+                .ToObject<VTTInstanceConfig>()!;
 
             VTTInstanceDirName = iconfig.VTTInstanceDirName;
             VTTInstanceTasksDatabaseName = iconfig.VTTInstanceTasksDatabaseName;
@@ -42,7 +50,10 @@ namespace VersionTaskTracker.Model.Configuration
 
         public void Save()
         {
-            string VTTInstanceConfigPath = Path.Combine(this._workingDir.FullName, this._config.VTTInstanceConfigPath);
+            string VTTInstanceConfigPath = Path.Combine(
+                this._workingDir.FullName,
+                this._config.VTTInstanceConfigPath
+            );
 
             File.WriteAllText(VTTInstanceConfigPath, JObject.FromObject(this).ToString());
         }

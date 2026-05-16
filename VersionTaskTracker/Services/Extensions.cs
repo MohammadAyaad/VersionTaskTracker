@@ -6,6 +6,4 @@ using System.Threading.Tasks;
 
 namespace VersionTaskTracker.Services;
 
-public static class Extensions
-{
-}
+public static class Extensions { }

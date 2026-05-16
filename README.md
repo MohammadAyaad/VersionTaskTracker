@@ -9,3 +9,5 @@
 
 # Note :
 this is just a simple version with a basic Tasks tracking system , no change log generation and no logging added yet!
+
+Also the executable MUST be only `vtt` as it is hardcoded in the code to only run as so. just to avoid confusion. 

@@ -1,0 +1,10 @@
+{
+    "terminal.integrated.profiles.linux": {
+      "bash": {
+        "path": "/bin/bash",
+        "args": ["-c", "export PATH=$PATH:$(pwd)/VTT/bin/Debug/net8.0 && exec bash"]
+      }
+    },
+    "terminal.integrated.defaultProfile.linux": "bash"
+  }
+  
