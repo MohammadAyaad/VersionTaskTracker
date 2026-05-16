@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
-using UtilitiesX;
-using UtilitiesX.Extensions;
 using VersionTaskTracker.Model.Tracking;
 using static VersionTaskTracker.Cli.Program;
 
@@ -33,8 +31,8 @@ public class StatusCommand : ICommand
                                 instance.WorkingDirectory,
                                 instance.VTTIgnore
                             )
-                            .Map(c => c.Path)
-                            .Map(m => $"untracked: '{m}'")
+                            .Select(c => c.Path)
+                            .Select(m => $"untracked: '{m}'")
                     )
                 );
                 c.ResetColor();

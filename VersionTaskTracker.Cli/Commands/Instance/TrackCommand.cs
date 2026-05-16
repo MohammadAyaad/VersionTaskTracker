@@ -7,8 +7,6 @@ using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
 using GlobExpressions;
-using UtilitiesX;
-using UtilitiesX.Extensions;
 using VersionTaskTracker.Model.Tracking;
 
 namespace VersionTaskTracker.Cli.Commands.Instance;
@@ -33,7 +31,7 @@ public class TrackCommand : ICommand
                     Program.Instance.VTTIgnore
                 )
                 .Where(c => Glob.IsMatch(c.Path, Path))
-                .Map(c =>
+                .Select(c =>
                 {
                     console.Output.WriteLine($"ADDED: {c.Path}");
                     return c;

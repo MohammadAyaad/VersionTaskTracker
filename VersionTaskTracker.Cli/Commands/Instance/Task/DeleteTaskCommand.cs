@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
-using UtilitiesX.Extensions;
 using static VersionTaskTracker.Cli.Program;
 
 namespace VersionTaskTracker.Cli.Commands.Instance.Task;

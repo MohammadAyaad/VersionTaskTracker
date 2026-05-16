@@ -54,7 +54,8 @@ public class CreateTaskCommand : ICommand
                     instance
                         .TasksDbContext.Tasks.OrderByDescending(t => t.Int_Id)
                         .FirstOrDefault()
-                        ?.Int_Id ?? 0;
+                        ?.Int_Id
+                    ?? 0;
 
                 instance.TasksDbContext.Tasks.Add(
                     new VersionTaskTracker.Model.Tracking.Task()

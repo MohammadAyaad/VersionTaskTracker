@@ -8,8 +8,8 @@ public class Task
     public required string Status { get; set; }
     public string Description { get; set; } = string.Empty;
     public Guid ParentComponentId { get; set; }
-    public virtual Component ParentComponent { get; set; } = default!;
-    
+    public virtual Component? ParentComponent { get; set; } = default!;
+
     public override string ToString()
     {
         return $"[{Id.ToString()}|#{Int_Id}]: {Label}\nStatus : {Status}\n{Description}";

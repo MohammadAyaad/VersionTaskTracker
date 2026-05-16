@@ -7,8 +7,6 @@ using CliFx;
 using CliFx.Attributes;
 using CliFx.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using UtilitiesX;
-using UtilitiesX.Extensions;
 using VersionTaskTracker.Model.Tracking;
 using static VersionTaskTracker.Cli.Program;
 
@@ -33,25 +31,25 @@ public class ListTasksCommand : ICommand
             {
                 if (instance.TasksDbContext.Tasks.Count() == 0)
                     c.Output.WriteLine("No tasks added yet!");
-                else
-                    c.Output.WriteLine(
-                        string.Join(
-                            '\n',
-                            instance
-                                .TasksDbContext.Tasks.Branch<
-                                    IQueryable<VersionTaskTracker.Model.Tracking.Task>
-                                >(
-                                    t => TargetPath.Trim() != "",
-                                    onTrue: t =>
-                                        t.Where(x => x.ParentComponent.Path.Equals(TargetPath)),
-                                    onFalse: f => f
-                                )
-                                .Map(
-                                    (t) =>
-                                        $"[{t.Id.ToString()}|#{t.Int_Id.ToString()}] {t.Status.PadRight(10)} | {t.Label.PadRight(25)} | {t.ParentComponent.Path}"
-                                )
-                        )
-                    );
+                else { }
+                c.Output.WriteLine(
+                    string.Join(
+                        '\n',
+                        instance
+                            .TasksDbContext.Tasks.Branch<
+                                IQueryable<VersionTaskTracker.Model.Tracking.Task>
+                            >(
+                                t => TargetPath.Trim() != "",
+                                onTrue: t =>
+                                    t.Where(x => x.ParentComponent!.Path.Equals(TargetPath)),
+                                onFalse: f => f
+                            )
+                            .Select(
+                                (t) =>
+                                    $"[{t.Id.ToString()}|#{t.Int_Id.ToString()}] {t.Status.PadRight(10)} | {t.Label.PadRight(25)} | {t.ParentComponent!.Path}"
+                            )
+                    )
+                );
                 return ValueTask.CompletedTask;
             }
         );
