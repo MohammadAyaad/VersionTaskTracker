@@ -1,5 +1,4 @@
 ﻿using System.IO.Abstractions;
-using System.Reflection;
 using CliFx;
 using CliFx.Infrastructure;
 using VersionTaskTracker.Cli.Commands.Instance;
@@ -13,9 +12,7 @@ namespace VersionTaskTracker.Cli;
 
 public static class Program
 {
-    public static readonly string ENVIRONMENT_PATH = Path.GetDirectoryName(
-        Assembly.GetExecutingAssembly().Location
-    )!;
+    public static readonly string ENVIRONMENT_PATH = AppContext.BaseDirectory;
 
     public static VTTEnvironment Environment = VTTEnvironment.Setup(ENVIRONMENT_PATH);
     public static VTTInstance? Instance;
