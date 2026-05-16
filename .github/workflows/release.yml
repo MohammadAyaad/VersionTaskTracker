@@ -58,7 +58,7 @@ jobs:
 
     - name: Build Standalone Executable
       run: >
-        dotnet publish -c Release 
+        dotnet publish VersionTaskTracker.Cli/VersionTaskTracker.Cli.csproj -c Release 
         -r ${{ matrix.rid }} 
         --self-contained true 
         -p:PublishSingleFile=true 
