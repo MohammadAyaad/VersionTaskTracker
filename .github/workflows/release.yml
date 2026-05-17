@@ -83,7 +83,7 @@ jobs:
       shell: pwsh
       run: |
         # 1. Clean out the 'v' header for names and configurations
-        $rawVersion = $env:GITHUB_REF_NAME
+        $rawVersion = $env:GITHUB_REF_NAME -replace '^v', ''
         "VERSION=$rawVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
         
         # 2. Enforce strict matching rules to check if this is a side-channel pre-release
@@ -94,7 +94,7 @@ jobs:
         }
         
         # 3. Formulate structural naming formats
-        $baseName = "VersionTaskTracker-$rawVersion-${{ matrix.platform }}-${{ matrix.architecture }}"
+        $baseName = "VersionTaskTracker-v$rawVersion-${{ matrix.platform }}-${{ matrix.architecture }}"
         
         if ("${{ matrix.has_installer }}" -eq "true") {
           $installerName = "$baseName-Installer.${{ matrix.installer_ext }}"
