@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: write # Grants the workflow permission to write assets back to your release page
+  contents: write
 
 jobs:
   compile-and-package:
@@ -19,22 +19,36 @@ jobs:
             runner: windows-latest
             rid: win-x64
             binary_name: vtt.exe
-            package_name: VersionTaskTracker-Windows-x64.zip
+            platform: Windows
+            architecture: x64
+            has_installer: true
+            installer_ext: msi
+            archive_ext: zip
           - os: linux
             runner: ubuntu-latest
             rid: linux-x64
             binary_name: vtt
-            package_name: versiontasktracker-linux-x64.deb
+            platform: Linux
+            architecture: x64
+            has_installer: true
+            installer_ext: deb
+            archive_ext: tar.gz
           - os: macos-intel
             runner: macos-latest
             rid: osx-x64
             binary_name: vtt
-            package_name: VersionTaskTracker-Mac-Intel.tar.gz
+            platform: macOS
+            architecture: x64
+            has_installer: false
+            archive_ext: tar.gz
           - os: macos-silicon
             runner: macos-latest
             rid: osx-arm64
             binary_name: vtt
-            package_name: VersionTaskTracker-Mac-Silicon.tar.gz
+            platform: macOS
+            architecture: arm64
+            has_installer: false
+            archive_ext: tar.gz
 
     steps:
     - name: Pull Source Code
@@ -65,44 +79,110 @@ jobs:
         -p:PublishReadyToRun=true 
         -o ./publish_output
 
-    - name: Package Windows Binary
+    - name: Set Version, Channel Status, and File Names
+      shell: pwsh
+      run: |
+        # 1. Clean out the 'v' header for names and configurations
+        $rawVersion = $env:GITHUB_REF_NAME -replace '^v', ''
+        "VERSION=$rawVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+        
+        # 2. Enforce strict matching rules to check if this is a side-channel pre-release
+        if ($env:GITHUB_REF_NAME -match '^v\d+\.\d+\.\d+$') {
+          "IS_PRERELEASE=false" | Out-File -FilePath $env:GITHUB_ENV -Append
+        } else {
+          "IS_PRERELEASE=true" | Out-File -FilePath $env:GITHUB_ENV -Append
+        }
+        
+        # 3. Formulate structural naming formats
+        $baseName = "VersionTaskTracker-v$rawVersion-${{ matrix.platform }}-${{ matrix.architecture }}"
+        
+        if ("${{ matrix.has_installer }}" -eq "true") {
+          $installerName = "$baseName-Installer.${{ matrix.installer_ext }}"
+          "INSTALLER_NAME=$installerName" | Out-File -FilePath $env:GITHUB_ENV -Append
+        }
+        
+        $archiveName = "$baseName-Compressed.${{ matrix.archive_ext }}"
+        "ARCHIVE_NAME=$archiveName" | Out-File -FilePath $env:GITHUB_ENV -Append
+        
+        # 4. Generate clean output staging directory
+        New-Item -ItemType Directory -Force -Path ./dist
+
+    - name: Package Windows Artifacts (MSI & ZIP)
       if: matrix.os == 'windows'
       shell: pwsh
       run: |
-        Compress-Archive -Path ./publish_output/${{ matrix.binary_name }} -DestinationPath ./${{ matrix.package_name }}
+        # 1. Build the Raw Zip Archive for the upgrader
+        Compress-Archive -Path ./publish_output/${{ matrix.binary_name }} -DestinationPath ./dist/$env:ARCHIVE_NAME
+        
+        # 2. Extract clean numeric version string for WiX structural rule constraints
+        if ($env:VERSION -match '^(\d+\.\d+\.\d+)') { $msiVersion = $Matches[1] } else { $msiVersion = "1.0.0" }
+        
+        # 3. Create a minimal inline WiX compilation manifest (Fixing ICE80 by explicitly setting 64-bit architecture)
+        $wxsConfig = @"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+          <Product Id="*" Name="VersionTaskTracker" Language="1033" Version="$msiVersion" Manufacturer="MohammadAyaad" UpgradeCode="9b3e15b2-3fc2-4d22-b9e3-ec5df3427969">
+            <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+            <MediaTemplate EmbedCab="yes" />
+            <Directory Id="TARGETDIR" Name="SourceDir">
+              <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="VersionTaskTracker">
+                  <Component Id="MainExecutable" Guid="6c5e23a1-7fd3-4bde-a359-56bf471295b4" Win64="yes">
+                    <File Id="VttExe" Source="publish_output\vtt.exe" KeyPath="yes" />
+                    <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+            <Feature Id="ProductFeature" Title="VersionTaskTracker" Level="1">
+              <ComponentRef Id="MainExecutable" />
+            </Feature>
+          </Product>
+        </Wix>
+        "@
+        Set-Content -Path product.wxs -Value $wxsConfig
+        
+        # 4. Compile and link the installer package via the preinstalled WiX Toolset
+        candle.exe product.wxs
+        light.exe product.wixobj -out ./dist/$env:INSTALLER_NAME
 
-    - name: Package Linux Debian Binary
+    - name: Package Linux Debian & Raw Tarball Artifacts
       if: matrix.os == 'linux'
       run: |
-        # 1. Create standard Debian filesystem hierarchy
+        # 1. Build the Raw Tarball for the upgrader
+        tar -czvf ./dist/$ARCHIVE_NAME -C ./publish_output ${{ matrix.binary_name }}
+
+        # 2. Create standard Debian filesystem hierarchy
         mkdir -p debian_pkg/DEBIAN
         mkdir -p debian_pkg/usr/bin
         
-        # 2. Copy compiled binary into target execution path
+        # 3. Copy compiled binary into target execution path
         cp ./publish_output/${{ matrix.binary_name }} debian_pkg/usr/bin/
         chmod +x debian_pkg/usr/bin/${{ matrix.binary_name }}
         
-        # 3. Dynamically inject required control manifest configurations
+        # 4. Dynamically inject required control manifest configurations
         cat <<EOF > debian_pkg/DEBIAN/control
         Package: versiontasktracker
-        Version: ${GITHUB_REF_NAME#v}
+        Version: $VERSION
         Architecture: amd64
         Maintainer: MohammadAyaad
         Description: A local task tracker built for Git repositories.
         EOF
         
-        # 4. Run system archiver to lock in the installer package
-        dpkg-deb --build debian_pkg ./${{ matrix.package_name }}
+        # 5. Run system archiver to lock in the installer package
+        dpkg-deb --build debian_pkg ./dist/$INSTALLER_NAME
 
-    - name: Package macOS Binary
+    - name: Package macOS Artifacts (Raw Compressed Archive Only)
       if: startsWith(matrix.os, 'macos')
       run: |
         chmod +x ./publish_output/${{ matrix.binary_name }}
-        tar -czvf ./${{ matrix.package_name }} -C ./publish_output ${{ matrix.binary_name }}
+        # Packs exclusively the single raw tar archive
+        tar -czvf ./dist/$ARCHIVE_NAME -C ./publish_output ${{ matrix.binary_name }}
 
     - name: Publish Artifact to GitHub Release Page
       uses: softprops/action-gh-release@v2
       with:
-        files: ./${{ matrix.package_name }}
+        files: ./dist/*
+        prerelease: ${{ env.IS_PRERELEASE }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
