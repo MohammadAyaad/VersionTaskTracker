@@ -19,22 +19,26 @@ jobs:
             runner: windows-latest
             rid: win-x64
             binary_name: vtt.exe
-            package_name: VersionTaskTracker-Windows-x64.zip
+            installer_name: VersionTaskTracker-Windows-x64.msi
+            archive_name: VersionTaskTracker-Windows-x64.zip
           - os: linux
             runner: ubuntu-latest
             rid: linux-x64
             binary_name: vtt
-            package_name: versiontasktracker-linux-x64.deb
+            installer_name: versiontasktracker-linux-x64.deb
+            archive_name: VersionTaskTracker-Linux-x64.tar.gz
           - os: macos-intel
             runner: macos-latest
             rid: osx-x64
             binary_name: vtt
-            package_name: VersionTaskTracker-Mac-Intel.tar.gz
+            installer_name: VersionTaskTracker-Mac-Intel.tar.gz
+            archive_name: VersionTaskTracker-Mac-Intel-Raw.tar.gz
           - os: macos-silicon
             runner: macos-latest
             rid: osx-arm64
             binary_name: vtt
-            package_name: VersionTaskTracker-Mac-Silicon.tar.gz
+            installer_name: VersionTaskTracker-Mac-Silicon.tar.gz
+            archive_name: VersionTaskTracker-Mac-Silicon-Raw.tar.gz
 
     steps:
     - name: Pull Source Code
@@ -65,24 +69,63 @@ jobs:
         -p:PublishReadyToRun=true 
         -o ./publish_output
 
-    - name: Package Windows Binary
+    - name: Package Windows Artifacts (MSI & ZIP)
       if: matrix.os == 'windows'
       shell: pwsh
       run: |
-        Compress-Archive -Path ./publish_output/${{ matrix.binary_name }} -DestinationPath ./${{ matrix.package_name }}
+        # 1. Build the Raw Zip Archive for the upgrader
+        Compress-Archive -Path ./publish_output/${{ matrix.binary_name }} -DestinationPath ./${{ matrix.archive_name }}
+        
+        # 2. Extract cleanly formatted numeric version string for MSI metadata rule constraints
+        # (Converts tags like 'v1.0.4-alpha' down to a clean numeric '1.0.4' required by WiX)
+        $version = $env:GITHUB_REF_NAME -replace '^v', ''
+        if ($version -match '^(\d+\.\d+\.\d+)') { $msiVersion = $Matches[1] } else { $msiVersion = "1.0.0" }
+        
+        # 3. Create a minimal inline WiX compilation manifest
+        $wxsConfig = @"
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+          <Product Id="*" Name="VersionTaskTracker" Language="1033" Version="$msiVersion" Manufacturer="MohammadAyaad" UpgradeCode="9b3e15b2-3fc2-4d22-b9e3-ec5df3427969">
+            <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+            <MediaTemplate EmbedCab="yes" />
+            <Directory Id="TARGETDIR" Name="SourceDir">
+              <Directory Id="ProgramFiles64Folder">
+                <Directory Id="INSTALLFOLDER" Name="VersionTaskTracker">
+                  <Component Id="MainExecutable" Guid="6c5e23a1-7fd3-4bde-a359-56bf471295b4">
+                    <File Id="VttExe" Source="publish_output\vtt.exe" KeyPath="yes" />
+                    <!-- Automatically injects the installation folder into the system environment PATH -->
+                    <Environment Id="PATH" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+                  </Component>
+                </Directory>
+              </Directory>
+            </Directory>
+            <Feature Id="ProductFeature" Title="VersionTaskTracker" Level="1">
+              <ComponentRef Id="MainExecutable" />
+            </Feature>
+          </Product>
+        </Wix>
+        "@
+        Set-Content -Path product.wxs -Value $wxsConfig
+        
+        # 4. Compile and link the installer package via the preinstalled WiX Toolset
+        candle.exe product.wxs
+        light.exe product.wixobj -out ./${{ matrix.installer_name }}
 
-    - name: Package Linux Debian Binary
+    - name: Package Linux Debian & Raw Tarball Artifacts
       if: matrix.os == 'linux'
       run: |
-        # 1. Create standard Debian filesystem hierarchy
+        # 1. Build the Raw Tarball for the upgrader
+        tar -czvf ./${{ matrix.archive_name }} -C ./publish_output ${{ matrix.binary_name }}
+
+        # 2. Create standard Debian filesystem hierarchy
         mkdir -p debian_pkg/DEBIAN
         mkdir -p debian_pkg/usr/bin
         
-        # 2. Copy compiled binary into target execution path
+        # 3. Copy compiled binary into target execution path
         cp ./publish_output/${{ matrix.binary_name }} debian_pkg/usr/bin/
         chmod +x debian_pkg/usr/bin/${{ matrix.binary_name }}
         
-        # 3. Dynamically inject required control manifest configurations
+        # 4. Dynamically inject required control manifest configurations
         cat <<EOF > debian_pkg/DEBIAN/control
         Package: versiontasktracker
         Version: ${GITHUB_REF_NAME#v}
@@ -91,18 +134,23 @@ jobs:
         Description: A local task tracker built for Git repositories.
         EOF
         
-        # 4. Run system archiver to lock in the installer package
-        dpkg-deb --build debian_pkg ./${{ matrix.package_name }}
+        # 5. Run system archiver to lock in the installer package
+        dpkg-deb --build debian_pkg ./${{ matrix.installer_name }}
 
-    - name: Package macOS Binary
+    - name: Package macOS Artifacts (Installer & Raw)
       if: startsWith(matrix.os, 'macos')
       run: |
         chmod +x ./publish_output/${{ matrix.binary_name }}
-        tar -czvf ./${{ matrix.package_name }} -C ./publish_output ${{ matrix.binary_name }}
+        
+        # Pack both versions (For macOS, these can share the same compression formats, differentiated by name mapping targets)
+        tar -czvf ./${{ matrix.installer_name }} -C ./publish_output ${{ matrix.binary_name }}
+        cp ./${{ matrix.installer_name }} ./${{ matrix.archive_name }}
 
     - name: Publish Artifact to GitHub Release Page
       uses: softprops/action-gh-release@v2
       with:
-        files: ./${{ matrix.package_name }}
+        files: |
+          ./${{ matrix.installer_name }}
+          ./${{ matrix.archive_name }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
