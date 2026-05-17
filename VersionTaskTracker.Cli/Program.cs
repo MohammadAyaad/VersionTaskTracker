@@ -6,6 +6,8 @@ using VersionTaskTracker.Cli.Commands.Instance.Task;
 using VersionTaskTracker.Cli.Commands.Instance.Task.Update;
 using VersionTaskTracker.Cli.Commands.Test;
 using VersionTaskTracker.Cli.Commands.VTT;
+using VersionTaskTracker.Cli.Commands.VTT.Upgrading;
+using VersionTaskTracker.Cli.Commands.VTT.Upgrading.UpgradeChannel;
 using VersionTaskTracker.Services;
 
 namespace VersionTaskTracker.Cli;
@@ -39,6 +41,14 @@ public static class Program
             .AddCommand<UpdateTaskLabelCommand>()
             .AddCommand<UpdateTaskDescriptionCommand>()
             .AddCommand<DeleteTaskCommand>()
+            .AddCommand<UpgradeCommand>()
+            .AddCommand<UpgradeInfoCommand>()
+            .AddCommand<UpgradeToCommand>()
+            .AddCommand<UpgradeContinueCommand>()
+            .AddCommand<UpgradeCleanCommand>()
+            .AddCommand<UpgradeLatestCommand>()
+            .AddCommand<UpgradeAlphaCommand>()
+            .AddCommand<UpgradeBetaCommand>()
             .SetExecutableName("vtt")
             .Build()
             .RunAsync(args);

@@ -83,7 +83,7 @@ jobs:
       shell: pwsh
       run: |
         # 1. Clean out the 'v' header for names and configurations
-        $rawVersion = $env:GITHUB_REF_NAME -replace '^v', ''
+        $rawVersion = $env:GITHUB_REF_NAME
         "VERSION=$rawVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
         
         # 2. Enforce strict matching rules to check if this is a side-channel pre-release
