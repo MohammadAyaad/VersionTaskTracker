@@ -85,8 +85,10 @@ public static class UpgradeService
 
         string outputFile = Path.Combine(TEMP_DIR, fileName)!;
 
-        var responseStream = await new HttpClient().GetStreamAsync(asset.BrowserDownloadUrl);
-        var fileStream = new FileStream(outputFile, System.IO.FileMode.CreateNew);
+        await using var responseStream = await new HttpClient().GetStreamAsync(
+            asset.BrowserDownloadUrl
+        );
+        await using var fileStream = new FileStream(outputFile, System.IO.FileMode.CreateNew);
 
         await responseStream.CopyToAsync(fileStream);
         return outputFile;
@@ -170,7 +172,10 @@ public static class UpgradeService
     public static async Task RemoveSelfOldFromTemp()
     {
         //running from within the temp folder
-        if (Path.GetDirectoryName(AppContext.BaseDirectory) != TEMP_DIR_NAME)
+        if (
+            Path.GetFileName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))
+            != TEMP_DIR_NAME
+        )
             throw new Exception("Invalid Directory of execution.");
         string target = Path.Combine(
             Directory.GetParent(AppContext.BaseDirectory)!.ToString(),
@@ -187,29 +192,40 @@ public static class UpgradeService
     public static async Task CopyNewCompressedVersion()
     {
         //running from within the temp folder
-        if (Path.GetDirectoryName(AppContext.BaseDirectory) != TEMP_DIR_NAME)
+        if (
+            Path.GetFileName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))
+            != TEMP_DIR_NAME
+        )
             throw new Exception("Invalid Directory of execution.");
         string srcDir = AppContext.BaseDirectory; //this is now the temp folder anyway
         string src = Directory
             .GetFiles(srcDir)
             .First(f =>
-                f.StartsWith(APP_FULL_NAME) && (f.EndsWith(".tar.gz") || f.EndsWith(".zip"))
+                Path.GetFileName(f).StartsWith(APP_FULL_NAME)
+                && (f.EndsWith(".tar.gz") || f.EndsWith(".zip"))
             );
-        string dst = Directory.GetParent(AppContext.BaseDirectory)!.ToString();
-        File.Copy(src, dst);
+        string dst = Path.Combine(
+            Directory.GetParent(AppContext.BaseDirectory)!.ToString(),
+            Path.GetFileName(src)
+        );
+        File.Copy(src, dst, true);
     }
 
     public static async Task ExtractNewVersion()
     {
         //running from within the temp folder
-        if (Path.GetDirectoryName(AppContext.BaseDirectory) != TEMP_DIR_NAME)
+        if (
+            Path.GetFileName(AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar))
+            != TEMP_DIR_NAME
+        )
             throw new Exception("Invalid Directory of execution.");
 
         string target = Directory.GetParent(AppContext.BaseDirectory)!.ToString();
         string compressed = Directory
             .GetFiles(target)
             .First(f =>
-                f.StartsWith(APP_FULL_NAME) && (f.EndsWith(".tar.gz") || f.EndsWith(".zip"))
+                Path.GetFileName(f).StartsWith(APP_FULL_NAME)
+                && (f.EndsWith(".tar.gz") || f.EndsWith(".zip"))
             );
         if (compressed.EndsWith(".zip"))
         {
@@ -249,6 +265,6 @@ public static class UpgradeService
             throw new Exception(
                 "Could not continue due to the file lock unclearing after 20 tries over 10 seconds."
             );
-        Directory.Delete(TEMP_DIR);
+        Directory.Delete(TEMP_DIR, recursive: true);
     }
 }
