@@ -94,14 +94,16 @@ public static class UpgradeService
 
     public static async Task CopySelfToTemp()
     {
-        string src = Path.Combine(AppContext.BaseDirectory, Environment.ProcessPath!);
-        string dst = Path.Combine(TEMP_DIR, Environment.ProcessPath!);
-        File.Copy(src, dst);
+        string executableName = Path.GetFileName(Environment.ProcessPath!);
+        string src = Path.Combine(AppContext.BaseDirectory, executableName);
+        string dst = Path.Combine(TEMP_DIR, executableName);
+        File.Copy(src, dst, true);
     }
 
     public static async Task RunTempVersion()
     {
-        string target = Path.Combine(TEMP_DIR, Environment.ProcessPath!);
+        string executableName = Path.GetFileName(Environment.ProcessPath!);
+        string target = Path.Combine(TEMP_DIR, executableName!);
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = target,
@@ -172,7 +174,7 @@ public static class UpgradeService
             throw new Exception("Invalid Directory of execution.");
         string target = Path.Combine(
             Directory.GetParent(AppContext.BaseDirectory)!.ToString(),
-            Environment.ProcessPath!
+            Path.GetFileName(Environment.ProcessPath!)
         );
         if (!TryDeleteFileWithRetry(target, 20, 500))
         {
@@ -229,7 +231,7 @@ public static class UpgradeService
     {
         string target = Path.Combine(
             Directory.GetParent(AppContext.BaseDirectory)!.ToString(),
-            Environment.ProcessPath!
+            Path.GetFileName(Environment.ProcessPath!)!
         );
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
@@ -242,7 +244,7 @@ public static class UpgradeService
 
     public static async Task CleanOldVersion()
     {
-        string target = Path.Combine(TEMP_DIR, Environment.ProcessPath!);
+        string target = Path.Combine(TEMP_DIR, Path.GetFileName(Environment.ProcessPath!)!);
         if (!TryDeleteFileWithRetry(target, 20, 500))
             throw new Exception(
                 "Could not continue due to the file lock unclearing after 20 tries over 10 seconds."

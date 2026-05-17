@@ -28,6 +28,7 @@ public class UpgradeAlphaCommand : ICommand
         output.WriteLine($"latest version found to be '{Version}'");
         output.Write("Do you wish to proceed with the installation ? [y/n]");
         ConsoleKeyInfo key = output.Console.ReadKey(true);
+        output.WriteLine();
         if (key.KeyChar.ToString().ToLower() != "y")
         {
             output.WriteLine("update canceled!");
